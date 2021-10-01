@@ -8,7 +8,8 @@
  * y usar NodeRed para visualzar que la información se está recibiendo correctamente.
  * Este programa no requiere componentes adicionales.
  * 
- * Este programa envía datos por Internet a través del protocolo 
+ * Este programa envía datos por Internet a través del protocolo MQTT. 
+ * Para poder comprobar el funcionamiento de este programa, es 
  * 
  * Componente     PinESP32CAM     Estados lógicos
  * ledStatus------GPIO 33---------On=>LOW, Off=>HIGH
@@ -23,6 +24,7 @@
 //Bibliotecas
 #include <WiFi.h>  // Biblioteca para el control de WiFi
 #include <PubSubClient.h> //Biblioteca para conexion MQTT
+#include <Ultrasonic.h>
 
 //Datos de WiFi
 const char* ssid = "FamiliaC_2.4Gnormal";  // Aquí debes poner el nombre de tu red
@@ -32,16 +34,22 @@ const char* password = "Z7410l8E29mM941uU4127jO";  // Aquí debes poner la contr
 const char* mqtt_server = "3.68.34.73"; // Si estas en una red local, coloca la IP asignada, en caso contrario, coloca la IP publica
 IPAddress server(3.68.34.73);
 
-// Objetos
-WiFiClient espClient; // Este objeto maneja los datos de conexion WiFi
-PubSubClient client(espClient); // Este objeto maneja los datos de conexion al broker
-
 // Variables
 int flashLedPin = 4;  // Para indicar el estatus de conexión
 int statusLedPin = 33; // Para ser controlado por MQTT
 long timeNow, timeLast; // Variables de control de tiempo no bloqueante
-int data = 0; // Contador
+//int data = 0; // Contador
 int wait = 5000;  // Indica la espera cada 5 segundos para envío de mensajes MQTT
+//Declaración de pines
+int pinTriger = 15; //pin del triger
+int pinEcho = 14;  //pin del Echo 
+//variable
+int distancia = 0;
+
+// Objetos
+WiFiClient espClient; // Este objeto maneja los datos de conexion WiFi
+PubSubClient client(espClient); // Este objeto maneja los datos de conexion al broker
+Ultrasonic ultrasonic(pinTriger, pinEcho); //triger, echo
 
 // Inicialización del programa
 void setup() {
@@ -100,10 +108,12 @@ void loop() {
   if (timeNow - timeLast > wait) { // Manda un mensaje por MQTT cada cinco segundos
     timeLast = timeNow; // Actualización de seguimiento de tiempo
 
-    data++; // Incremento a la variable para ser enviado por MQTT
+    //Lectura del sensor ultrasonico 
+    distancia = ultrasonic.read(); //Lectura del sensor
+    
     char dataString[8]; // Define una arreglo de caracteres para enviarlos por MQTT, especifica la longitud del mensaje en 8 caracteres
-    dtostrf(data, 1, 2, dataString);  // Esta es una función nativa de leguaje AVR que convierte un arreglo de caracteres en una variable String
-    Serial.print("Contador: "); // Se imprime en monitor solo para poder visualizar que el evento sucede
+    dtostrf(distancia, 1, 2, dataString);  // Esta es una función nativa de leguaje AVR que convierte un arreglo de caracteres en una variable String
+    Serial.print("Distancia en CM: "); // Se imprime en monitor solo para poder visualizar que el evento sucede
     Serial.println(dataString);
     client.publish("esp32/data", dataString); // Esta es la función que envía los datos por MQTT, especifica el tema y el valor
   }// fin del if (timeNow - timeLast > wait)
